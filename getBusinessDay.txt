@@ -1,0 +1,1 @@
+SELECT  DATEADD(DAY, CASE DATENAME(WEEKDAY, GETDATE())                         WHEN 'Sunday' THEN -2                         WHEN 'Monday' THEN -3                         ELSE -1 END, DATEDIFF(DAY, 0, GETDATE()))
