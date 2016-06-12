@@ -1,0 +1,13 @@
+Recommendation systems
+
+
+Web recommendation systems attempt to predict rating behavior using various classes of algorithms:
+Content-based algorithms use product characteristics to recommend other items with similar characteristics.
+
+Collaborative filtering algorithms evaluate past behavior and similar product choices made by other users.
+
+Other algorithms build a model from a user's past behavior such as items previously purchased or selected and/or numerical ratings given to those items as well as similar decisions made by other users. 
+
+Popular Apps like Amazon, Netflix and Apple Music seem to incorporate a blend of both systems which translates to a better user experience. 
+
+A purely collaborative method seems frequently off the mark for me. These algorithms seem to incorporate demographic profiling, ageism, gender, and ethnicity factors that skew the product choice analytics resulting in stereotypical recommendations. 
