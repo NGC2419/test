@@ -1,0 +1,486 @@
+=======================================================================================================
+
+-- renders the previous Business process day
+
+Declare @StartDate date = '7/4/2017'
+Declare @localStartDate date = (SELECT max([ProcessDate]) from dbo.DateDimension (nolock) WHERE convert(date,[Date]) < @StartDate AND [ProcessDate] IS NOT NULL)
+
+=======================================================================================================
+
+-- CLIENT CODE
+
+DECLARE	 @localEndDate date = @enddate
+			,@localStartDate date = @startDate
+			,@localClientCode varchar(MAX) = @Client_Code
+
+	select [Loan Number] = l.ln_no, l.iv_id, l.iv_cat_cd, iv_nm = ic.investor
+	INTO #ClientLoans
+ 	FROM BDE_Data.dbo.ufnGetMax_loan(@localEndDate) l
+	INNER JOIN BDE_Data.dbo.investor_client ic on ic.inv_id = l.iv_id and ic.inv_cat = l.iv_cat_cd
+	AND ic.client IN (SELECT b.item from BDESime.dbo.fnMultiValueSplit(@localClientCode, ',') b) 
+
+----------------------------------------------------------------------------------------------------
+	select [Loan Number] = l.ln_no, l.iv_id, l.iv_cat_cd, iv_nm = ic.investor, ic.Client_Name
+	INTO #ClientLoans
+ 	FROM bde_data.dbo.ufnGetMax_loan(@localEndDate) l
+	INNER JOIN bde_data.dbo.investor_client ic on ic.inv_id = l.iv_id and ic.inv_cat = l.iv_cat_cd
+	AND ic.client IN (select Distinct Client_Code from BDESIME.sime.Clients) 
+----------------------------------------------------------------------------------------------------
+
+USE [BDE_Data]
+GO
+-- select * from portfolio_summary order by convert(date,loanDate) desc
+ 	DECLARE @localClientCode varchar(MAX) 
+	 select @localClientCode = coalesce(@localClientCode+',','') + client from (select distinct client from investor_client) t
+
+		  Select ic.Client
+				,[loan date] = convert(date,d.[loan date])
+				,UPB = sum(d.[FIRST PRINCIPAL BALANCE])
+		    FROM [BDESIME].[dbo].[delinquency_snapshot] d (nolock)
+		    INNER JOIN bde_data.dbo.investor_client ic (nolock) ON ic.inv_id = d.[INVESTOR ID] AND ic.inv_cat = d.iv_cat_cd
+					AND ic.client IN (SELECT b.item FROM BDESime.dbo.fnMultiValueSplit(@localClientCode, ',') b)  
+  	-- change date for ad-hoc updates
+		where convert(date,d.[loan date]) = '3/1/2017' 
+			  and  d.[FIRST PRINCIPAL BALANCE] <> 0 
+			group by ic.Client,d.[LOAN DATE]
+
+
+----------------------------------------------------------------------------------------------------
+
+
+
+
+declare @a as nvarchar(100)='r.k.Lee Brown' -- Es@D7mtFx9
+select reverse(substring(reverse(@a),0,charindex('.',reverse('.'+@a))))
+
+ SELECT c.[path], c.[name] AS Report_Name, d.[Description],
+                              CONVERT(XML, CONVERT(VARBINARY(MAX), content)) AS rdl 
+                      FROM   reportserver.dbo.catalog c
+					  LEFT JOIN #Descriptions d on c.[Name] = d.[name] and reverse(substring(reverse(c.[path]),1,charindex('/',reverse('/'+c.[path])))) = reverse(substring(reverse(d.[path]),1,charindex('/',reverse('/'+d.[path]))))
+                      
+
+=======================================================================================================
+=IIF(Fields!Skill.Value = Previous(Fields!Skill.Value),"",Fields!Skill.Value)
+=======================================================================================================
+
+=IIF(Parameters!Client_Code.Count=CountRows("clients"),"All",IIF(Parameters!Client_Code.Count = 1 , Parameters!Client_Code.Label(0), JOIN( Parameters!Client_Code.Label,", ")))
+
+="Agent Groups: " & IIF(Parameters!AgentGroup.Count=CountRows("agentGroups"),"All",IIF(Parameters!AgentGroup.Count = 1 , Parameters!AgentGroup.Label(0), JOIN( Parameters!AgentGroup.Label,", ")))
+
+=======================================================================================================
+
+split multi-value parameter for predicate IN clause
+
+WHERE  Agent_Group IN  (SELECT b.item from BDESime.dbo.fnMultiValueSplit(@AgentGroup, ',') b)  
+
+=SPLIT(JOIN(Parameters!clientCode.Value,","),",")
+
+=======================================================================================================
+Alternating Row Color
+
+=IIF(RowNumber(Nothing) MOD 2=0,”LightGrey”, “White”)
+
+=======================================================================================================
+
+=IIF(IsNothing(Timespan.FromTicks(sum(Fields!Queue_Wait_Time.Value) / Count(Fields!Calls.Value))), Nothing, Code.FormatTimeSpan(Timespan.FromTicks(sum(Fields!Queue_Wait_Time.Value) / Count(Fields!Calls.Value))))
+
+, IIF( WeekdayName(DateInterval.WeekDay,Today) = "Saturday", DateAdd("d",-1,Today() )
+SSRS
+
+end date  =>   =IIF(DATEPART(DateInterval.WeekDay,Today) = 2, DateAdd("d",-3,Today()) ,DateAdd("d",-1,Today()))
+
+last day of previous month DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE()),0))
+
+MONTH:  
+1) start date =>   	=IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) = Month(Today()), Today.AddDays(1-Today.Day)
+,IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) <> Month(Today()), dateadd("m",-1,dateserial(year(Today),month(Today),1)) 
+, dateadd("m",0,dateserial(year(Today),month(Today),1)) ))
+
+1) start date =>   	=IIF(Day(Today)<>1,Today.AddDays(1-Today.Day), IIF(DATEPART(DateInterval.WeekDay,Today) = 2, DateAdd("d",-3,Today()) ,DateAdd("d",-1,Today())) )
+1) start date =>   	=Today.AddDays(1-Today.Day)  -- first of the month
+1) start date => 	=IIF(DATEPART(DateInterval.WeekDay,Today.AddDays(1-Today.Day)) = 7, DateAdd("d",2,Today.AddDays(1-Today.Day))
+				,IIF(DATEPART(DateInterval.WeekDay,Today.AddDays(1-Today.Day)) = 1, DateAdd("d",1,Today.AddDays(1-Today.Day))
+				,Today.AddDays(1-Today.Day)))
+
+2) end date =>   	=Today ()
+2) end date =>		=IIF(DATEPART(DateInterval.WeekDay,Today) = 2, DateAdd("d",-3,Today()) ,DateAdd("d",-1,Today()))
+
+first of previous year =CDate("1/1/" & DatePart("yyyy",Today())-1) 
+first of 2 years ago  =CDate("1/1/" & DatePart("yyyy",Today())-2) 
+
+=======================================================================================================
+  
+T-SQL
+
+
+ 15th of month 	=>	declare @localEndDate date = convert(date,dateadd(d,15 - datepart(d,getdate()),getdate()))
+ 15th of prev month 	=>	declare @localEndDatePrev date = convert(date, dateadd(month,-1,@localEndDate))
+print @localEndDate
+print @localEndDatePrev
+
+year-month = CONCAT(datepart (yy,@localEndDate),datepart(mm,@localEndDate))
+
+  IF  ( DATENAME(weekday,getDATE()) = 'Monday' ) BEGIN SET @dlqdate = CAST(GETDATE()-3 as date) END
+  IF  ( DATENAME(weekday,getDATE()) = 'Sunday' ) BEGIN SET @dlqdate = CAST(GETDATE()-2 as date) END
+  IF  ( DATENAME(weekday,getDATE()) IN ('Tuesday','Wednesday','Thursday','Friday','Saturday')) BEGIN SET @dlqdate = CAST(GETDATE()-1 as date) END
+=======================================================================================================
+
+-- gets the 16th of the month beginning with inception month (Aug 2015) thru present month for SSRS dropdown menu selector
+SELECT [Date], sortDate = convert(varchar(10),[Date],101)
+      FROM [BDE_Data].[dbo].[DateDimension]
+	  WHERE [Day] = 16
+       and  [Date] > '7/16/2015'
+	   and [Date] < 	 EOMONTH ( getDate(), -1 )
+	   order by [sortDate] desc
+
+=======================================================================================================
+
+SELECT DISTINCT [Month]
+			, [MonthName]
+			, [Year]
+			, [MMYYYY]
+			, [MonthYear]
+			, [FirstDayOfMonth]
+			, [LastDayOfMonth]
+			, [FirstDayOfYear]
+			, [LastDayOfYear]
+			, [FirstDayOfNextYear] 
+			, [FirstDayOfNextMonth]
+			, [NextQuarterStart]	= DATEADD(QUARTER, DATEDIFF(QUARTER, 0, FirstDayOfQuarter) + 1, 0) 
+			, [NextQuarterEnd]		= DATEADD(QUARTER, DATEDIFF(QUARTER, 0, LastDayOfQuarter) + 2, -1) 
+			, [EndOfNextSixMonths]	= DATEADD(MONTH, DATEDIFF(MONTH, 0, [DATE]) + 6, DAY([DATE])-1) 
+		 INTO #DateDimension
+		 FROM DateDimension
+		WHERE [Year] = year(@localEndDate) And [Date] <= @localEndDate
+
+
+=======================================================================================================
+select [Date]
+		, [Quarter]
+		, [FirstDayOfQuarter]
+		, [LastDayOfQUarter]
+		, FirstDayOfPreviousQuarter = dateadd(month,-3,FirstDayOfQuarter) 
+		, LastDayOfPreviousQuarter	= dateadd(day,-1,FirstDayOfQuarter) 
+		, [FirstDayofPreviousPriorQuarter]	= convert(date,DATEADD(QUARTER, DATEDIFF(QUARTER, 0, FirstDayOfQuarter) - 2, 0) )
+		, [LastDayOfPreviousPriorQuarter]	= convert(date, DATEADD(s, -1, DATEADD(qq, DATEDIFF(qq, 0, DATEADD(QUARTER, DATEDIFF(QUARTER, 0, FirstDayOfQuarter) - 1, 0)     ), 0)))
+	from datedimension where date	= '5/17/2017'
+
+
+
+=======================================================================================================
+-- Gets BOM, EOM, [MonthName Year], SID
+
+SELECT DISTINCT BOM = d1.FirstDayOfMonth, EOM = d1.LastDayOfMonth, MonthYear = concat(d1.[MonthName],' ',convert(char(4),d1.[Year]))
+, d2.[sid]
+FROM     DateDimension d1
+join (
+SELECT ROW_NUMBER() OVER(ORDER BY FirstDayOfMonth ASC) AS sid, FirstDayOfMonth = max(FirstDayOfMonth)
+from DateDimension
+WHERE  (FirstDayOfMonth >= '8/1/2015') AND (LastDayOfMonth <= EOMONTH(GETDATE(), - 1)) OR
+                  (LastDayOfMonth >= '8/1/2015') AND (FirstDayOfMonth <= EOMONTH(GETDATE(), - 1))
+group by FirstDayOfMonth
+
+) d2 on d1.FirstDayOfMonth = d2.FirstDayOfMonth
+WHERE  (d1.FirstDayOfMonth >= '8/1/2015') AND (d1.LastDayOfMonth <= EOMONTH(GETDATE(), - 1)) OR
+                  (d1.LastDayOfMonth >= '8/1/2015') AND (d1.FirstDayOfMonth <= EOMONTH(GETDATE(), - 1))
+ORDER BY d2.[sid] DESC
+
+=======================================================================================================
+
+-- calculate elapsed time and display as hh.m
+[Total Log In Time] = round ( CONCAT((DATEDIFF(Minute,min([Login Time]),max([Logout Time])) / 60 ),   '.',   (DATEDIFF(Minute,min([Login Time]),max([Logout Time])) % 60 )) ,1)
+
+#,0;(#,0)
+
+--WHERE cast([next payment due date] as date) < DATEADD(month, DATEDIFF(month, 0, @rptdate), 0)	-- this line omits prepaid and pre-30
+
+
+=Iif(Fields!AckPassMTD.Value = 0, Nothing, "CFPB_Letters_Compliance_DT")  -- drill through
+
+
+
+-- retrieve rows for previous quarter through present
+      AND ltr_dt BETWEEN dateadd(quarter, datediff(quarter, 0, convert(date,@localEnddate)) - 1, 0) AND convert(date,@localEnddate) 
+			and convert(date,@localEnddate)
+-- Quarter to Date
+			WHERE convert(date,LetterDate) BETWEEN dateadd(quarter, datediff(quarter, 0, convert(date,@localStartDate)) - 0, 0)  -- current quarter begin date
+			and convert(date,@localEnddate)
+
+-- Previous Quarter 
+			WHERE convert(date,LetterDate) BETWEEN dateadd(quarter, datediff(quarter, 0, convert(date,@localEnddate)) - 1, 0)  -- previous quarter begin date
+			and dateadd(quarter, datediff(quarter, -1, convert(date,@localEnddate)) - 1, -1) -- previous quarter end date 
+
+-- mtd
+=Today.AddDays(1-Today.Day)
+SELECT DATEADD(MONTH, DATEDIFF(MONTH, '19000101', GETDATE()), '19000101')
+WHERE convert(date,LetterDate) BETWEEN @localStartDate and @localEnddate
+
+=IIF(Day(Today) = 1, DateValue(Today).AddMonths(-1), IIF(Day(Today) = 15,DateValue(Today).AddDays(-14),Today))
+
+=======================================================================================================
+
+SELECT DISTINCT Month, MonthName, Year, MMYYYY, MonthYear, FirstDayOfMonth, LastDayOfMonth, FirstDayOfYear, LastDayOfYear, FirstDayOfNextMonth, FirstDayOfNextYear
+FROM     DateDimension
+WHERE  (Date BETWEEN @startDate AND @EndDate)
+ORDER BY MMYYYY
+
+[YYYYMM] = convert(int,concat(Convert(char(4),f.[Year]),CASE WHEN Len(Month(f.[Date]))= 1 THEN Concat(convert(char(1),'0'), convert(char(1),Month(f.[Date]))) ELSE convert(char(2),Month(f.[Date])) END))
+
+
+=======================================================================================================
+[RANK] = rank() over(partition by o.ln_no, otd_dt  order by o.sid desc, CAST(otd_dt as date))
+
+filter out the deleted's 
+select * into #otd from otd where ( rank = 1 and delta_file_byte <> 'd')  
+
+
+=======================================================================================================
+** NEW client code **
+
+DECLARE	 @localEndDate date = @enddate
+			,@localStartDate date = @startDate
+			,@localClientCode varchar(MAX) = @Client_Code
+
+	select [Loan Number] = l.ln_no, l.iv_id, l.iv_cat_cd, iv_nm = ic.investor
+	INTO #ClientLoans
+ 	FROM BDE_Data.dbo.ufnGetMax_loan(@localEndDate) l
+	INNER JOIN BDE_Data.dbo.investor_client ic on ic.inv_id = l.iv_id and ic.inv_cat = l.iv_cat_cd
+	AND ic.client IN (SELECT b.item from BDESime.dbo.fnMultiValueSplit(@localClientCode, ',') b) 
+
+
+=IIF(Parameters!Client_Code.Count=CountRows("ListClients"),"All",IIF(Parameters!Client_Code.Count = 1 , Parameters!Client_Code.Label(0), JOIN( Parameters!Client_Code.Label,", ")))
+
+	-- if called by batch export file get all
+	select @localClientCode =  coalesce(@localClientCode+',','') + client from (select distinct client from investor_client) t
+	-- if called by SSRS report retrieve parms selected by the user								
+	select @localClientCode = CASE WHEN @Client_Code IS NOT NULL THEN @Client_Code ELSE @localClientCode END
+
+
+	
+=======================================================================================================
+
+
+
+Declare @StartDt date = '2016-06-01'
+
+
+Declare @EndDt date = @localEndDate
+
+
+declare @Days int = DATEDIFF(d, @StartDt, @EndDt) 
+
+
+
+SELECT @StartDt, @EndDt, @Days
+
+
+
+Declare @i int = 0
+
+
+
+WHILE @i < @Days
+	
+
+begin
+
+	
+
+INSERT INTO #xfers (Loan_date, Xfers) 
+	
+SELECT DATEADD(d, @i, @StartDt), Xfers
+	
+FROM the_other_table
+	
+	
+SET @i = @i + 1
+	
+	
+
+END
+
+
+=======================================================================================================
+
+
+DECLARE @localEndDate as datetime = '7/7/2016', @localState varchar(200) = 'all'
+                                                  	
+	SELECT DISTINCT c.[LOAN NUMBER]
+	FROM [BDESime].[dbo].[ListLoansForClient]('TMS000') c
+	JOIN  dbo.property p on c.[LOAN NUMBER] = p.[ln_no]
+	WHERE p.[pr_alpha_state_cd] LIKE (CASE @localState WHEN 'ALL' THEN '%' ELSE @localState  END)
+
+
+
+
+SELECT        'ALL' AS pr_alpha_state_cd, 1 AS Sid
+UNION
+SELECT DISTINCT pr_alpha_state_cd, 2 AS sid
+FROM            property
+WHERE        (pr_alpha_state_cd IS NOT NULL)
+ORDER BY sid, pr_alpha_state_cd
+
+
+=======================================================================================================
+-- COLLATION Es@D7mtFx9
+SELECT  r.[ReportName]
+		, r.[UserName]
+		, r.[Date]
+		, r.[Count]
+		, r.TimeDataRetrievalSum
+		, r.TimeProcessingSum 
+		, r.TimeRenderingSum 
+		, r.ByteCountSum 
+		, r.RowCountSum 
+		, [UserNameLabel] = right(r.username, charindex('\', REVERSE(r.username) +'\' ) -1) 
+	FROM Reports r
+	LEFT join #users u
+	-- fix for server error due to the SSRS report server having a different collation than the OLTP database servers
+	ON u.UserName COLLATE DATABASE_DEFAULT = r.UserName COLLATE DATABASE_DEFAULT	
+	ORDER BY r.[Date], r.[ReportName], r.[UserName], r.[Count] 
+ 
+
+====================================================================================================================
+convert to seconds:
+	 	, [Speed of Answer] = AVG(DATEDIFF(SECOND, '00:00:00',f.[Speed of Answer]))  -- convert to seconds
+		, [TALK TIME] = AVG(DATEDIFF(SECOND, '00:00:00',f.[Talk Time])) -- convert to seconds
+		--,speed2 =  datepart(hh,f.[Speed of Answer])*3600 + datepart(mi,f.[Speed of Answer]) * 60 + datepart(ss,f.[Speed of Answer])
+		--, talk2 = datepart(hh,f.[TALK TIME])*3600 + datepart(mi,f.[TALK TIME]) * 60 + datepart(ss,f.[TALK TIME])
+
+
+====================================================================================================================
+	DECLARE  @rptdate date = CAST(GETDATE() as date) 
+			,@dlqdate date 
+	   
+	   IF  ( DATENAME(weekday,getDATE()) = 'Monday' ) BEGIN SET @dlqdate = CAST(GETDATE()-3 as date) END
+	   IF  ( DATENAME(weekday,getDATE()) = 'Sunday' ) BEGIN SET @dlqdate = CAST(GETDATE()-2 as date) END
+	   IF  ( DATENAME(weekday,getDATE()) IN ('Tuesday','Wednesday','Thursday','Friday','Saturday')) BEGIN SET @dlqdate = CAST(GETDATE()-1 as date) END
+
+	   IF  ( DATENAME(weekday,getDATE()) = 'Monday' ) BEGIN SET @rptdate = CAST(GETDATE()-3 as date) END
+	   IF  ( DATENAME(weekday,getDATE()) = 'Sunday' ) BEGIN SET @rptdate = CAST(GETDATE()-2 as date) END
+	   IF  ( DATENAME(weekday,getDATE()) IN ('Tuesday','Wednesday','Thursday','Friday','Saturday')) BEGIN SET @rptdate = CAST(GETDATE()-1 as date) END
+
+
+if object_id('tempdb..#t1') is not null drop table #t1
+
+====================================================================================================================
+
+SELECT p.spid, p.status, p.hostname, p.loginame, p.cpu, last_batch, t.text FROM master.dbo.sysprocesses as p CROSS APPLY sys.dm_exec_sql_text(p.sql_handle) t order by loginame 
+
+;With cteObjectTypes AS
+   (
+   SELECT
+      TSV.trace_event_id,
+      TSV.subclass_name,
+      TSV.subclass_value
+   FROM
+      sys.trace_subclass_values AS TSV JOIN
+      sys.trace_columns AS TC ON
+         TSV.trace_column_id = TC.trace_column_id 
+   WHERE
+      TC.[name] = 'ObjectType'
+   ),
+   cteEventSubClasses AS
+   (
+   SELECT
+      TSV.trace_event_id,
+      TSV.subclass_name,
+      TSV.subclass_value
+   FROM
+      sys.trace_subclass_values AS TSV JOIN
+      sys.trace_columns AS TC ON
+         TSV.trace_column_id = TC.trace_column_id 
+   WHERE
+      TC.[name] = 'EventSubClass'
+   )
+SELECT distinct
+   TE.[name],
+   [Date] = convert(date,I.StartTime),
+   I.LoginName,
+   I.ObjectName
+--   Convert(nvarchar(10), I.ObjectType) + N'-' + OT.subclass_name as ObjectType,
+--   I.ApplicationName,
+--   I.BigintData1,
+--   I.ClientProcessID,
+--   I.ColumnPermissions,
+--   I.DatabaseID,
+--   I.DatabaseName,
+--   I.DBUserName,
+--   I.Duration,
+--   I.EndTime,
+--   I.Error,
+--   I.EventSequence,
+--   Convert(nvarchar(10), I.EventSubClass) + N'-' + ESC.subclass_name as EventSubClass,
+--   I.FileName,
+--   I.HostName,
+--   I.IndexID,
+--   I.IntegerData,
+--   I.IsSystem,
+--   I.LineNumber,
+----   I.LoginName,
+--   I.LoginSid,
+--   I.NestLevel,
+--   I.NTDomainName,
+--   I.NTUserName,
+--   I.ObjectID,
+--   I.ObjectID2,
+--   --I.ObjectName,
+--   --Convert(nvarchar(10), I.ObjectType) + N'-' + OT.subclass_name as ObjectType,
+--   I.OwnerName,
+--   I.ParentName,
+--   I.Permissions,
+--   I.RequestID,
+--   I.RoleName,
+--   I.ServerName,
+--   I.SessionLoginName,
+--   I.Severity,
+--   I.SPID,
+--   --I.StartTime,
+--   I.State,
+--   I.Success,
+--   I.TargetLoginName,
+--   I.TargetLoginSid,
+--   I.TargetUserName,
+--   I.TextData,
+--   I.TransactionID,
+--   I.Type,
+--   I.XactSequence
+FROM
+    sys.traces T CROSS Apply 
+    sys.fn_trace_gettable(CASE WHEN CHARINDEX('_', T.[path]) <> 0
+                              THEN SUBSTRING(T.PATH, 1, CHARINDEX('_', T.[path]) - 1) + '.trc'
+                              ELSE T.[path]
+                         End, T.max_files) I JOIN
+    sys.trace_events AS TE ON 
+      I.EventClass = TE.trace_event_id LEFT JOIN
+   cteEventSubClasses AS ESC ON
+      TE.trace_event_id = ESC.trace_event_id And
+      I.EventSubClass = ESC.subclass_value LEFT JOIN
+   cteObjectTypes AS OT ON 
+      TE.trace_event_id = OT.trace_event_id AND
+      I.ObjectType = OT.subclass_value
+--WHERE ObjectName like '%monthly%'
+  --where T.is_default = 1 
+  --AND   TE.NAME = 'Objecteleted'
+where 
+--and objectname = 'sp_dt_finance_summary_rpt'
+ I.DatabaseName in ('bdesime','bde_data')
+ --and objectname like 'sp_%'
+ and I.LoginName <> 'servicing'
+ --or Convert(nvarchar(10), I.ObjectType) + N'-' + OT.subclass_name = 'u'
+--AND   TE.NAME like '%delete%'
+   ORDER By convert(date,StartTime) desc
+
+
+====================================================================================================================
+use bde_data --   Es@D7mtFx9
+go
+IF (select NbrOfRows = count(LoanDate) from bde_data.dbo. portfolio_summary  Where convert(date,[LoanDate]) = convert(date,dateadd(day,-1,convert(date,getdate()) )  ) ) > 0
+BEGIN
+select * from dbo.portfolio_summary  Where convert(date,[LoanDate]) = convert(date,dateadd(day,-1,convert(date,getdate()) )  ) 
+END
+ELSE 
+BEGIN
+print 'No rows for ' + convert(varchar(12),convert(date,dateadd(day,-1,convert(date,getdate()))))
+END
+
