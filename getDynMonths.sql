@@ -1,0 +1,15 @@
+select January = convert(varchar(12),'1/15/') + convert(char(10), datepart(year,getdate()))
+, February = convert(varchar(12),'2/15/') + convert(char(10), datepart(year,getdate()))
+, March = convert(varchar(12),'3/15/') + convert(char(10), datepart(year,getdate()))
+, April = convert(varchar(12),'4/15/') + convert(char(10), datepart(year,getdate()))
+, May = convert(varchar(12),'5/15/') + convert(char(10), datepart(year,getdate()))
+, June = convert(varchar(12),'6/15/') + convert(char(10), datepart(year,getdate()))
+, July = convert(varchar(12),'7/15/') + convert(char(10), datepart(year,getdate()))
+, August = convert(varchar(12),'8/15/') + convert(char(10), datepart(year,getdate()))
+, September = convert(varchar(12),'9/15/') + convert(char(10), datepart(year,getdate()))
+, October = convert(varchar(12),'10/15/') + convert(char(10), datepart(year,getdate()))
+, November = convert(varchar(12),'11/15/') + convert(char(10), datepart(year,getdate()))
+, December = convert(varchar(12),'12/15/') + convert(char(10), datepart(year,getdate()))
+
+-- convert to yyyymm
+select  convert(int,concat(convert(char(4), datepart(year,'1/1/2016')), convert(varchar(2),CASE WHEN datepart(month,'1/1/2016') > 9 THEN convert(varchar(2),datepart(month,'1/1/2016'))	ELSE '0' + convert(char(1),datepart(month,'1/1/2016')) END)))
