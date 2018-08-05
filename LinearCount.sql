@@ -1,0 +1,1 @@
+/* Increment and dynamically generate a list of integers for use with the Predicate */PRINT '(' + '''' + convert(varchar(10),@StartNumeral) + ',' + ''''WHILE @StartNumeral < @EndNumeralBEGINSELECT @StartNumeral = @StartNumeral + 1PRINT '''' + cast(@StartNumeral AS varchar(6)) + '''' + ','ÊENDPRINT '''' + convert(varchar(10),@StartNumeral + '''' + ')'Ê

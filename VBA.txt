@@ -1,63 +1,4 @@
-=======================================================================================================
-
--- renders the previous Business process day
-
-Declare @StartDate date = '7/4/2017'
-Declare @localStartDate date = (SELECT max([ProcessDate]) from dbo.DateDimension (nolock) WHERE convert(date,[Date]) < @StartDate AND [ProcessDate] IS NOT NULL)
-
-=======================================================================================================
-
--- CLIENT CODE
-
-DECLARE	 @localEndDate date = @enddate
-			,@localStartDate date = @startDate
-			,@localClientCode varchar(MAX) = @Client_Code
-
-	select [Loan Number] = l.ln_no, l.iv_id, l.iv_cat_cd, iv_nm = ic.investor
-	INTO #ClientLoans
- 	FROM BDE_Data.dbo.ufnGetMax_loan(@localEndDate) l
-	INNER JOIN BDE_Data.dbo.investor_client ic on ic.inv_id = l.iv_id and ic.inv_cat = l.iv_cat_cd
-	AND ic.client IN (SELECT b.item from BDESime.dbo.fnMultiValueSplit(@localClientCode, ',') b) 
-
-----------------------------------------------------------------------------------------------------
-	select [Loan Number] = l.ln_no, l.iv_id, l.iv_cat_cd, iv_nm = ic.investor, ic.Client_Name
-	INTO #ClientLoans
- 	FROM bde_data.dbo.ufnGetMax_loan(@localEndDate) l
-	INNER JOIN bde_data.dbo.investor_client ic on ic.inv_id = l.iv_id and ic.inv_cat = l.iv_cat_cd
-	AND ic.client IN (select Distinct Client_Code from BDESIME.sime.Clients) 
-----------------------------------------------------------------------------------------------------
-
-USE [BDE_Data]
-GO
--- select * from portfolio_summary order by convert(date,loanDate) desc
- 	DECLARE @localClientCode varchar(MAX) 
-	 select @localClientCode = coalesce(@localClientCode+',','') + client from (select distinct client from investor_client) t
-
-		  Select ic.Client
-				,[loan date] = convert(date,d.[loan date])
-				,UPB = sum(d.[FIRST PRINCIPAL BALANCE])
-		    FROM [BDESIME].[dbo].[delinquency_snapshot] d (nolock)
-		    INNER JOIN bde_data.dbo.investor_client ic (nolock) ON ic.inv_id = d.[INVESTOR ID] AND ic.inv_cat = d.iv_cat_cd
-					AND ic.client IN (SELECT b.item FROM BDESime.dbo.fnMultiValueSplit(@localClientCode, ',') b)  
-  	-- change date for ad-hoc updates
-		where convert(date,d.[loan date]) = '3/1/2017' 
-			  and  d.[FIRST PRINCIPAL BALANCE] <> 0 
-			group by ic.Client,d.[LOAN DATE]
-
-
-----------------------------------------------------------------------------------------------------
-
-
-
-
-declare @a as nvarchar(100)='r.k.Lee Brown' -- Es@D7mtFx9
-select reverse(substring(reverse(@a),0,charindex('.',reverse('.'+@a))))
-
- SELECT c.[path], c.[name] AS Report_Name, d.[Description],
-                              CONVERT(XML, CONVERT(VARBINARY(MAX), content)) AS rdl 
-                      FROM   reportserver.dbo.catalog c
-					  LEFT JOIN #Descriptions d on c.[Name] = d.[name] and reverse(substring(reverse(c.[path]),1,charindex('/',reverse('/'+c.[path])))) = reverse(substring(reverse(d.[path]),1,charindex('/',reverse('/'+d.[path]))))
-                      
+="Projected Escrow beginning " & FormatDateTime(DateAdd("m",1,CDate(Parameters!startDate.Value)),DateFormat.ShortDate) + " Clients: " & IIF(Parameters!Client_Code.Count=CountRows("Clients"),"All",IIF(Parameters!Client_Code.Count = 1 , Parameters!Client_Code.Label(0), JOIN( Parameters!Client_Code.Label,", ")))
 
 =======================================================================================================
 =IIF(Fields!Skill.Value = Previous(Fields!Skill.Value),"",Fields!Skill.Value)
@@ -87,11 +28,21 @@ Alternating Row Color
 , IIF( WeekdayName(DateInterval.WeekDay,Today) = "Saturday", DateAdd("d",-1,Today() )
 SSRS
 
-end date  =>   =IIF(DATEPART(DateInterval.WeekDay,Today) = 2, DateAdd("d",-3,Today()) ,DateAdd("d",-1,Today()))
+=IIF(DATEPART(DateInterval.Weekday,Today) = 2, DateAdd("d",-3,Today()) ,DateAdd("d",-1,Today()))
 
-last day of previous month DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE()),0))
+=IIF(Day(Today)<>1,Today.AddDays(1-Today.Day), IIF(DATEPART(DateInterval.WeekDay,Today) = 2, DateAdd("d",-3,Today()) ,DateAdd("d",-1,Today())) )
 
 MONTH:  
+1) =IIF (
+	IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) = Month(Today()), Today.AddDays(1-Today.Day)
+	,IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) <> Month(Today()), dateadd("m",-1,dateserial(year(Today),month(Today),1)) 
+	, dateadd("m",0,dateserial(year(Today),month(Today),1)) )) = Today.AddDays(1-Today.Day) 
+	, dateadd("m",-1,dateserial(year(Today),month(Today),1))
+	,IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) = Month(Today()), Today.AddDays(1-Today.Day)
+	,IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) <> Month(Today()), dateadd("m",-1,dateserial(year(Today),month(Today),1)) 
+	, dateadd("m",0,dateserial(year(Today),month(Today),1)) ))
+	)
+-- previous
 1) start date =>   	=IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) = Month(Today()), Today.AddDays(1-Today.Day)
 ,IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) <> Month(Today()), dateadd("m",-1,dateserial(year(Today),month(Today),1)) 
 , dateadd("m",0,dateserial(year(Today),month(Today),1)) ))
@@ -103,15 +54,27 @@ MONTH:
 				,Today.AddDays(1-Today.Day)))
 
 2) end date =>   	=Today ()
+2) =IIF (
+	IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) = Month(Today()), Today.AddDays(1-Today.Day)
+	,IIF(DATEPART(DateInterval.WeekDay,Today) = 2 AND Month(DateAdd("d",-3,Today())) <> Month(Today()), dateadd("m",-1,dateserial(year(Today),month(Today),1)) 
+	, dateadd("m",0,dateserial(year(Today),month(Today),1)) )) = Today.AddDays(1-Today.Day) 
+	, dateadd("d",-1, dateadd("m",0,dateserial(year(Today),month(Today),1)))
+	,IIF(DATEPART(DateInterval.WeekDay,Today) = 2, DateAdd("d",-3,Today()) ,DateAdd("d",-1,Today()))
+	)
+-- Previous
 2) end date =>		=IIF(DATEPART(DateInterval.WeekDay,Today) = 2, DateAdd("d",-3,Today()) ,DateAdd("d",-1,Today()))
 
-first of previous year =CDate("1/1/" & DatePart("yyyy",Today())-1) 
-first of 2 years ago  =CDate("1/1/" & DatePart("yyyy",Today())-2) 
+last day of last month => 	=dateadd("m",0,dateserial(year(Today),month(Today),0))
 
+FirstDayOfPriorMonth = dateadd(month,-1,FirstDayOfMonth)
+LastDayOfPriorMonth = EOMONTH(dateadd(month,-1,Date))
 =======================================================================================================
+
   
 T-SQL
-
+1st day of last month  =>  DATEADD(month, DATEDIFF(month, 0, GETDATE())-1, 0)
+1st day of this month  => DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0) 
+1st day of next month => DATEADD(month, DATEDIFF(month, 0, GETDATE())1, 0)
 
  15th of month 	=>	declare @localEndDate date = convert(date,dateadd(d,15 - datepart(d,getdate()),getdate()))
  15th of prev month 	=>	declare @localEndDatePrev date = convert(date, dateadd(month,-1,@localEndDate))
@@ -155,40 +118,78 @@ SELECT DISTINCT [Month]
 
 
 =======================================================================================================
-select [Date]
-		, [Quarter]
-		, [FirstDayOfQuarter]
-		, [LastDayOfQUarter]
-		, FirstDayOfPreviousQuarter = dateadd(month,-3,FirstDayOfQuarter) 
-		, LastDayOfPreviousQuarter	= dateadd(day,-1,FirstDayOfQuarter) 
-		, [FirstDayofPreviousPriorQuarter]	= convert(date,DATEADD(QUARTER, DATEDIFF(QUARTER, 0, FirstDayOfQuarter) - 2, 0) )
-		, [LastDayOfPreviousPriorQuarter]	= convert(date, DATEADD(s, -1, DATEADD(qq, DATEDIFF(qq, 0, DATEADD(QUARTER, DATEDIFF(QUARTER, 0, FirstDayOfQuarter) - 1, 0)     ), 0)))
-	from datedimension where date	= '5/17/2017'
-
-
-
-=======================================================================================================
--- Gets BOM, EOM, [MonthName Year], SID
-
-SELECT DISTINCT BOM = d1.FirstDayOfMonth, EOM = d1.LastDayOfMonth, MonthYear = concat(d1.[MonthName],' ',convert(char(4),d1.[Year]))
-, d2.[sid]
-FROM     DateDimension d1
-join (
-SELECT ROW_NUMBER() OVER(ORDER BY FirstDayOfMonth ASC) AS sid, FirstDayOfMonth = max(FirstDayOfMonth)
-from DateDimension
-WHERE  (FirstDayOfMonth >= '8/1/2015') AND (LastDayOfMonth <= EOMONTH(GETDATE(), - 1)) OR
-                  (LastDayOfMonth >= '8/1/2015') AND (FirstDayOfMonth <= EOMONTH(GETDATE(), - 1))
-group by FirstDayOfMonth
-
-) d2 on d1.FirstDayOfMonth = d2.FirstDayOfMonth
-WHERE  (d1.FirstDayOfMonth >= '8/1/2015') AND (d1.LastDayOfMonth <= EOMONTH(GETDATE(), - 1)) OR
-                  (d1.LastDayOfMonth >= '8/1/2015') AND (d1.FirstDayOfMonth <= EOMONTH(GETDATE(), - 1))
-ORDER BY d2.[sid] DESC
-
-=======================================================================================================
 
 -- calculate elapsed time and display as hh.m
+
 [Total Log In Time] = round ( CONCAT((DATEDIFF(Minute,min([Login Time]),max([Logout Time])) / 60 ),   '.',   (DATEDIFF(Minute,min([Login Time]),max([Logout Time])) % 60 )) ,1)
+
+
+-- sum SSRS detail rows into subtotal row
+
+=CStr(sum(CInt(split(Fields!Total_Productive_Time.Value,":")(0)))+sum(CInt(split(Fields!Total_Productive_Time.Value,":")(1)))\60)+":"+CStr(sum(CInt(split(Fields!Total_Productive_Time.Value,":")(1))) mod 60+sum(CInt(split(Fields!Total_Productive_Time.Value,":")(2)))\60)  +":"+CStr(sum(CInt(split(Fields!Total_Productive_Time.Value,":")(2))) mod 60)
+
+=======================================================================================================
+
+-- calculate difference between 2 timestamps in these time slices
+
+select  (DATEDIFF(SECOND, min([Login Time]),max([Logout Time])) / 86400) AS Day
+,(DATEDIFF(SECOND, min([Login Time]),max([Logout Time])) / 3600) % 24 AS Hour
+, (DATEDIFF(SECOND, min([Login Time]),max([Logout Time])) / 60) % 60 AS Min
+,  DATEDIFF(SECOND, min([Login Time]),max([Logout Time])) % 60 AS Sec
+,  DATEDIFF(SECOND, min([Login Time]),max([Logout Time])) as TotalSec
+
+=======================================================================================================
+
+[Total Log In Time]= CASE  WHEN min([Login Time]) IS NULL  THEN CONVERT(time, DATEADD(ms, isnull(sum(0) ,0) * 1000, 0), 114)
+WHEN max([Logout Time]) IS NULL THEN CONVERT(time, DATEADD(ms, isnull(sum(0) ,0) * 1000, 0), 114)
+ELSE CONVERT(time,DATEADD(ms,  DATEDIFF(SECOND, min([Login Time]),max([Logout Time]))    * 1000, 0), 114)
+
+=======================================================================================================
+-- Left trim leading zeros  (if hours = 00 then retain otherwise strip leading zeros)
+
+Public Function LTrimZeros(varNumber)
+Dim strChr As String
+Dim n As Integer
+
+strChr = "0"
+n = 0
+
+Do Until strChr <> "0"
+n = n + 1
+LTrimZeros = Mid(varNumber, n)
+strChr = Mid(varNumber, n, 1)
+Loop
+End Function
+
+=IIF(SUM(Cint(Split(Fields!Total_Log_In_Time.Value,":").GetValue(0)),"table1_Agent_Name") = 0 
+,
+ Right("00"+(SUM(Cint(Split(Fields!Total_Log_In_Time.Value,":").GetValue(0)),"table1_Agent_Name")  
+
++ (SUM(Cint(Split(Fields!Total_Log_In_Time.Value,":").GetValue(1)),"table1_Agent_Name")  
+
++ Sum(Cint(split(Fields!Total_Log_In_Time.Value,":").GetValue(2)),"table1_Agent_Name") \60)\60 ).ToString,2) 
++ ":" 
++ Right("00"+((SUM(Cint(Split(Fields!Total_Log_In_Time.Value,":").GetValue(1)),"table1_Agent_Name")  
+
++ Sum(Cint(split(Fields!Total_Log_In_Time.Value,":").GetValue(2)),"table1_Agent_Name") \60) Mod 60).ToString,2) 
++ ":" 
++ Right("00"+(Sum(Cint(split(Fields!Total_Log_In_Time.Value,":").GetValue(2)),"table1_Agent_Name")  Mod 60).ToString,2)
+
+, 
+Code.LTrimZeros(Right("000"+(SUM(Cint(Split(Fields!Total_Log_In_Time.Value,":").GetValue(0)),"table1_Agent_Name") 
+
++ (SUM(Cint(Split(Fields!Total_Log_In_Time.Value,":").GetValue(1)),"table1_Agent_Name") 
+
++ Sum(Cint(split(Fields!Total_Log_In_Time.Value,":").GetValue(2)),"table1_Agent_Name")\60)\60 ).ToString,6) 
++ ":" )
++ Right("00"+((SUM(Cint(Split(Fields!Total_Log_In_Time.Value,":").GetValue(1)),"table1_Agent_Name") 
+
++ Sum(Cint(split(Fields!Total_Log_In_Time.Value,":").GetValue(2)),"table1_Agent_Name")\60) Mod 60).ToString,2) 
++ ":" 
++ Right("00"+(Sum(Cint(split(Fields!Total_Log_In_Time.Value,":").GetValue(2)),"table1_Agent_Name") Mod 60).ToString,2)
+)
+
+
 
 #,0;(#,0)
 
@@ -232,6 +233,48 @@ ORDER BY MMYYYY
 
 filter out the deleted's 
 select * into #otd from otd where ( rank = 1 and delta_file_byte <> 'd')  
+
+
+=======================================================================================================
+I typed up Scott’s procedure for the Loan Detail  drill-through. (Thanks Scott!)
+Susan
+
+
+DataSet
+---------
+1. Create a new embedded dataset named ds_URL
+
+2. Query Type is Text
+
+3. Add this query:   SELECT dbo.ufnGetgetloanlink() AS URL
+
+4. Field name is URL
+
+
+
+Parameter
+-----------
+1. Create a hidden Parameter named URL
+
+2. set the Default Values to "Get values from a query"
+
+3. Dataset:  ds_URL
+
+4. Value Field:  URL
+
+
+
+Report field
+---------------
+1. Find the Loan_Number column
+
+2. Click on Text Box Properties
+
+3. Click on Action, Select URL
+
+4. Set this expression for the Hyperlink
+
+="javascript:void(window.open('"+ Parameters!URL.Value & Fields!Loan_Number.Value + "','_blank'))"
 
 
 =======================================================================================================
@@ -322,7 +365,7 @@ ORDER BY sid, pr_alpha_state_cd
 
 
 =======================================================================================================
--- COLLATION Es@D7mtFx9
+-- COLLATION
 SELECT  r.[ReportName]
 		, r.[UserName]
 		, r.[Date]
@@ -363,124 +406,122 @@ convert to seconds:
 
 if object_id('tempdb..#t1') is not null drop table #t1
 
-====================================================================================================================
-
-SELECT p.spid, p.status, p.hostname, p.loginame, p.cpu, last_batch, t.text FROM master.dbo.sysprocesses as p CROSS APPLY sys.dm_exec_sql_text(p.sql_handle) t order by loginame 
-
-;With cteObjectTypes AS
-   (
-   SELECT
-      TSV.trace_event_id,
-      TSV.subclass_name,
-      TSV.subclass_value
-   FROM
-      sys.trace_subclass_values AS TSV JOIN
-      sys.trace_columns AS TC ON
-         TSV.trace_column_id = TC.trace_column_id 
-   WHERE
-      TC.[name] = 'ObjectType'
-   ),
-   cteEventSubClasses AS
-   (
-   SELECT
-      TSV.trace_event_id,
-      TSV.subclass_name,
-      TSV.subclass_value
-   FROM
-      sys.trace_subclass_values AS TSV JOIN
-      sys.trace_columns AS TC ON
-         TSV.trace_column_id = TC.trace_column_id 
-   WHERE
-      TC.[name] = 'EventSubClass'
-   )
-SELECT distinct
-   TE.[name],
-   [Date] = convert(date,I.StartTime),
-   I.LoginName,
-   I.ObjectName
---   Convert(nvarchar(10), I.ObjectType) + N'-' + OT.subclass_name as ObjectType,
---   I.ApplicationName,
---   I.BigintData1,
---   I.ClientProcessID,
---   I.ColumnPermissions,
---   I.DatabaseID,
---   I.DatabaseName,
---   I.DBUserName,
---   I.Duration,
---   I.EndTime,
---   I.Error,
---   I.EventSequence,
---   Convert(nvarchar(10), I.EventSubClass) + N'-' + ESC.subclass_name as EventSubClass,
---   I.FileName,
---   I.HostName,
---   I.IndexID,
---   I.IntegerData,
---   I.IsSystem,
---   I.LineNumber,
-----   I.LoginName,
---   I.LoginSid,
---   I.NestLevel,
---   I.NTDomainName,
---   I.NTUserName,
---   I.ObjectID,
---   I.ObjectID2,
---   --I.ObjectName,
---   --Convert(nvarchar(10), I.ObjectType) + N'-' + OT.subclass_name as ObjectType,
---   I.OwnerName,
---   I.ParentName,
---   I.Permissions,
---   I.RequestID,
---   I.RoleName,
---   I.ServerName,
---   I.SessionLoginName,
---   I.Severity,
---   I.SPID,
---   --I.StartTime,
---   I.State,
---   I.Success,
---   I.TargetLoginName,
---   I.TargetLoginSid,
---   I.TargetUserName,
---   I.TextData,
---   I.TransactionID,
---   I.Type,
---   I.XactSequence
-FROM
-    sys.traces T CROSS Apply 
-    sys.fn_trace_gettable(CASE WHEN CHARINDEX('_', T.[path]) <> 0
-                              THEN SUBSTRING(T.PATH, 1, CHARINDEX('_', T.[path]) - 1) + '.trc'
-                              ELSE T.[path]
-                         End, T.max_files) I JOIN
-    sys.trace_events AS TE ON 
-      I.EventClass = TE.trace_event_id LEFT JOIN
-   cteEventSubClasses AS ESC ON
-      TE.trace_event_id = ESC.trace_event_id And
-      I.EventSubClass = ESC.subclass_value LEFT JOIN
-   cteObjectTypes AS OT ON 
-      TE.trace_event_id = OT.trace_event_id AND
-      I.ObjectType = OT.subclass_value
---WHERE ObjectName like '%monthly%'
-  --where T.is_default = 1 
-  --AND   TE.NAME = 'Objecteleted'
-where 
---and objectname = 'sp_dt_finance_summary_rpt'
- I.DatabaseName in ('bdesime','bde_data')
- --and objectname like 'sp_%'
- and I.LoginName <> 'servicing'
- --or Convert(nvarchar(10), I.ObjectType) + N'-' + OT.subclass_name = 'u'
---AND   TE.NAME like '%delete%'
-   ORDER By convert(date,StartTime) desc
-
+-- regex to exclude 
+CASE WHEN @local_includeREO = 0 THEN '[^reo]%' ELSE '%' END
 
 ====================================================================================================================
-use bde_data --   Es@D7mtFx9
-go
-IF (select NbrOfRows = count(LoanDate) from bde_data.dbo. portfolio_summary  Where convert(date,[LoanDate]) = convert(date,dateadd(day,-1,convert(date,getdate()) )  ) ) > 0
-BEGIN
-select * from dbo.portfolio_summary  Where convert(date,[LoanDate]) = convert(date,dateadd(day,-1,convert(date,getdate()) )  ) 
-END
-ELSE 
-BEGIN
-print 'No rows for ' + convert(varchar(12),convert(date,dateadd(day,-1,convert(date,getdate()))))
-END
+ Client code - using delinquency_snapshot table
+====================================================================================================================
 
+	SELECT DISTINCT d.[Loan Number]
+				,d.[Loan Date]
+				,[Mth Status Name] = CASE WHEN d.[Proper_Status] like '%REO%' THEN 'REO' ELSE d.[Mth Status Name] END
+				,d.[Proper_Status] 
+				,d.[First Principal Balance]
+			INTO #Delinquency
+			FROM [BDESIME].[dbo].[delinquency_snapshot] d (nolock)
+			INNER JOIN bde_data.dbo.investor_client ic ON ic.inv_id = d.[INVESTOR ID] AND ic.inv_cat = d.iv_cat_cd
+			 AND ic.client IN (SELECT b.item FROM BDESime.dbo.fnMultiValueSplit(@localClientCode, ',') b)
+		 WHERE d.[loan date] IN (@PreviousPriorDate, @localPriorDate, @localCurrentDate)
+		 and d.[MTH STATUS NAME] in ('Pre-30 Days Delinquent','Prepaid or Current','30 Days Delinquent','60 Days Delinquent','90 Days Delinquent','120+ Days Delinquent')
+		 AND d.[First Principal Balance] > 0 
+
+====================================================================================================================
+SELECT BOM = CASE WHEN getdate() >  BOM THEN DateAdd(month,-1,BOM) ELSE BOM END
+, EOM = CASE WHEN getdate() >  BOM THEN DateAdd(month,-1,EOM) ELSE EOM END
+, MonthYear = CASE WHEN getdate() >  BOM THEN concat(DateName(month,(dateadd(month,-1,BOM))),' ',DateName(year,(dateadd(month,-1,BOM)))) ELSE MonthYear END
+--, MonthYear = CASE WHEN getdate() >  BOM THEN Concat(DatePart(month,dateadd(MonthName,-1,BOM)),' ',DatePart(year,dateadd(year,-1,BOM))) ELSE MonthYear END
+, sid
+FROM     SSRSmonthYear
+WHERE  (EOM >= '8/1/2015') AND (EOM <= GETDATE()) OR
+                  (EOM >= '8/1/2015') AND (BOM <= GETDATE())
+ORDER BY sid DESC
+====================================================================================================================
+REPLACE everything to left of symbol
+	, DLQStatusFrom = LEFT([Movement], CHARINDEX('_', [Movement]) - 1) 
+REPLACE everything to right of string
+	    , DLQStatusTo = REPLACE(SUBSTRING([Movement], CHARINDEX('_', [Movement]), LEN([Movement])), '_To_', '') 
+====================================================================================================================
+select * from five9_activity where [DISPOSITION] = 'Abandon' and [ABANDONED]=1 and [TIME TO ABANDON] < 00:00:05'
+====================================================================================================================
+
+/***********************************************************/
+		  -- insert duplicate first of month process days
+		  DECLARE @Dupe int = @CurrMthTotProcessCalendarDays - @PriorMthTotProcessCalendarDays
+		  -- There are more days in Current Month than Prior Month
+		 IF @Dupe > 0
+		  BEGIN 
+		  Declare @i int = 0
+		 	WHILE @i < @Dupe -1
+				BEGIN
+				  INSERT INTO #cashDash
+				  SELECT Distinct * 
+				  FROM #cashdash 
+				  WHERE convert(date,[Process Date]) = @PriorMonth
+				 SET @i = @i+1
+				END
+			
+		 END
+
+		  -- There are more days in Prior Month than Currnet Month
+		  IF @Dupe < 0
+		  BEGIN 
+		  Declare @j int = 0
+			WHILE @j < abs(@Dupe) -1
+				BEGIN
+				  INSERT INTO #cashdash
+				  SELECT Distinct * 
+				  FROM #cashdash 
+				  WHERE convert(date,[Process Date]) = @StartOfMonth
+				 SET @j = @j+1
+				END
+		 END
+
+====================================================================================================================
+declare @yyyymm int = 201601
+print  CASE WHEN substring(convert(char(6),@YYYYMM),5,2)='01' THEN @yyyymm - 89 ELSE @yyyymm - 1 END
+
+
+UPDATE DateDimension
+set NbrProcessDaysPriorMth = d2.NbrProcessDaysPriorMth
+FROM DateDimension d
+JOIN (
+SELECT distinct C_YYYYMM = c.YYYYMM, c.NbrProcessDays, NbrProcessDaysPriorMth =p.NbrProcessDays, P_YYYYMM = p.YYYYMM
+FROM      (-- Get records from the Current month from the OriginalFact table.
+     SELECT distinct YYYYMM, NbrProcessDays, NbrProcessDaysPriorMth 
+      FROM  DateDimension
+      WHERE  yyyymm IN (@yyyymm)
+      ) c -- Current
+   CROSS APPLY (-- Get records from the Prior month.
+     SELECT distinct YYYYMM, NbrProcessDays, NbrProcessDaysPriorMth 
+      FROM  DateDimension
+      WHERE  yyyymm = convert(int,CASE WHEN substring(convert(char(6),@YYYYMM),5,2)='01' THEN @yyyymm - 89 ELSE @yyyymm - 1 END)
+      ) p -- Prior
+   group by C.YYYYMM, c.NbrProcessDays,p.YYYYMM,p.NbrProcessDays
+   ) d2
+   ON d.YYYYMM = d2.C_YYYYMM
+
+SELECT distinct YYYYMM, NbrProcessDays, NbrProcessDaysPriorMth  from DateDimension where YYYYMM = @yyyymm
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
+====================================================================================================================
